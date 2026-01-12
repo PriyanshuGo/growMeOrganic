@@ -183,3 +183,8 @@ body {
   background-color: #2563eb;
   border-color: #2563eb;
 }
+
+.selectedRow {
+  font-weight: 600;
+  color: #0b5394;
+}

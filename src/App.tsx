@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import axios from 'axios'
 import { DataTable } from 'primereact/datatable'
 import { Column } from 'primereact/column'
+
+
 import 'primereact/resources/themes/lara-light-blue/theme.css'
 import 'primereact/resources/primereact.min.css'
 import 'primeicons/primeicons.css'
@@ -38,6 +40,9 @@ function App() {
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [page, setPage] = useState<number>(1)
 
+  const [selectedArtworks, setSelectedArtworks] = useState<Artwork[]>([])
+
+
   useEffect(() => {
     const fetchArtworks = async () => {
       setLoading(true)
@@ -47,7 +52,8 @@ function App() {
         const response = await axios.get<ArtApiResponse>(
           `https://api.artic.edu/api/v1/artworks?page=${page}`,
         )
-        setArtworks(response.data.data ?? [])
+        const normalizedData = (response.data.data ?? []).map(normalizeArtwork)
+        setArtworks(normalizedData)
         setPagination(response.data.pagination ?? null)
       } catch (err) {
         if (axios.isAxiosError(err)) {
@@ -76,8 +82,17 @@ function App() {
 
       {error && <div className="app__error">Error: {error}</div>}
 
+      <p>Selected : <span className='selectedRow'>{selectedArtworks.length}</span> rows</p>
       <DataTable
+
         value={artworks}
+        dataKey="id"
+        selectionMode="multiple"
+        selection={selectedArtworks}
+        onSelectionChange={(e) => {
+          setSelectedArtworks(e.value as Artwork[])
+        }}
+
         loading={loading}
         stripedRows
         paginator
@@ -86,7 +101,6 @@ function App() {
         first={(page - 1) * (pagination?.limit ?? 12)}
         totalRecords={pagination?.total ?? 0}
         onPage={(e) => {
-          console.log(e)
           if (e.page !== undefined) {
             setPage(e.page + 1)
           }
@@ -145,3 +159,10 @@ export const reportTemplate = (options: any) => {
   )
 }
 
+
+export const normalizeArtwork = (artwork: Artwork): Artwork => {
+  return {
+    ...artwork,
+    inscriptions: artwork.inscriptions ?? 'N/A',
+  }
+}
