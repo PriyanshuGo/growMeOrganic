@@ -42,6 +42,52 @@ function App() {
 
   const [selectedArtworks, setSelectedArtworks] = useState<Artwork[]>([])
 
+  const [showBulkSelect, setShowBulkSelect] = useState(false);
+  const [bulkSelectCount, setBulkSelectCount] = useState<number>(0);
+  const [remainingRows, setRemainingRows] = useState<number>(0);
+
+
+  const handleBulkSelect = () => {
+    if (!bulkSelectCount || bulkSelectCount <= 0) return;
+
+    setSelectedArtworks(prev => {
+      const newSelection: Artwork[] = [...prev];
+
+      for (let i = 0; i < artworks.length && newSelection.length < bulkSelectCount; i++) {
+        if (!newSelection.find(a => a.id === artworks[i].id)) {
+          newSelection.push(artworks[i]);
+        }
+      }
+
+      const stillRemaining = bulkSelectCount - newSelection.length;
+      setRemainingRows(stillRemaining > 0 ? stillRemaining : 0);
+
+      return newSelection;
+    });
+
+    setShowBulkSelect(false);
+  };
+
+  useEffect(() => {
+    if (remainingRows <= 0) return;
+
+    setSelectedArtworks(prev => {
+      const newSelection: Artwork[] = [...prev];
+
+      for (let i = 0; i < artworks.length && newSelection.length < prev.length + remainingRows; i++) {
+        if (!newSelection.find(a => a.id === artworks[i].id)) {
+          newSelection.push(artworks[i]);
+        }
+      }
+
+      const consumed = newSelection.length - prev.length;
+      setRemainingRows(r => r - consumed);
+
+      return newSelection;
+    });
+  }, [artworks]);
+
+
 
   useEffect(() => {
     const fetchArtworks = async () => {
@@ -84,6 +130,8 @@ function App() {
         }
         return acc
       }, []));
+
+      setBulkSelectCount(0);
       return
     }
     // HEADER CHECKBOX UNCHECKED (unselect all on current page)
@@ -93,6 +141,7 @@ function App() {
           acc.push(currentValue)
         } return acc
       }, []));
+      setBulkSelectCount(0);
       return
     }
 
@@ -110,7 +159,7 @@ function App() {
 
       {error && <div className="app__error">Error: {error}</div>}
 
-      <p>Selected : <span className='selectedRow'>{selectedArtworks.length}</span> rows</p>
+      <p>Selected : <span className='selectedRow'>{bulkSelectCount > 0 ? bulkSelectCount : selectedArtworks.length}</span> rows</p>
       <DataTable
 
         value={artworks}
@@ -157,7 +206,68 @@ function App() {
         emptyMessage="No artworks found."
       >
 
-        <Column selectionMode="multiple" headerStyle={{ width: '3rem' }}></Column>
+        <Column
+          selectionMode="multiple"
+          headerStyle={{ width: '3rem', position: 'relative' }}
+          header={
+            <div style={{ position: 'relative' }}>
+              <i className="pi pi-angle-down" style={{ fontSize: '2rem' }} onClick={() => setShowBulkSelect(!showBulkSelect)}></i>
+
+              {showBulkSelect && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '1.8rem',
+                    left: 0,
+                    width: '260px',
+                    padding: '12px',
+                    background: '#fff',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    zIndex: 1000,
+                  }}
+                >
+                  <strong style={{ display: 'block', marginBottom: 6 }}>
+                    Select Multiple Rows
+                  </strong>
+
+                  <label style={{ fontSize: 12, color: '#555' }}>
+                    Enter number of rows to select across all pages
+                  </label>
+
+                  <input
+                    type="number"
+                    value={bulkSelectCount}
+                    onChange={(e) => setBulkSelectCount(Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      marginTop: 6,
+                      padding: '6px',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+
+                  <button
+                    onClick={handleBulkSelect}
+                    style={{
+                      marginTop: 10,
+                      width: '100%',
+                      padding: '8px',
+                      background: '#3b82f6',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Select
+                  </button>
+                </div>
+              )}
+            </div>
+          }
+        />
         <Column field="title" header="Title" />
         <Column field="place_of_origin" header="Place of Origin" />
         <Column field="artist_display" header="Artist" />
