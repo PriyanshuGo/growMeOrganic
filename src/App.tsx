@@ -8,6 +8,9 @@ import { Column } from 'primereact/column'
 import 'primereact/resources/themes/lara-light-blue/theme.css'
 import 'primereact/resources/primereact.min.css'
 import 'primeicons/primeicons.css'
+import { DataTableSelectionChangeEvent } from 'primereact/datatable';
+import { PaginatorTemplateOptions } from 'primereact/paginator';
+import { PaginatorCurrentPageReportOptions } from 'primereact/paginator';
 
 type Artwork = {
   id: number
@@ -85,7 +88,7 @@ function App() {
 
       return newSelection;
     });
-  }, [artworks]);
+  }, [artworks,remainingRows]);
 
 
 
@@ -119,7 +122,7 @@ function App() {
     fetchArtworks()
   }, [page])
 
-  const onSelectionChange = (e: any) => {
+  const onSelectionChange = (e: DataTableSelectionChangeEvent) => {
     const newSelection = e.value as Artwork[]
 
     // HEADER CHECKBOX CHECKED (select all on current page)
@@ -282,7 +285,7 @@ function App() {
 export default App
 
 
-export const reportTemplate = (options: any) => {
+export const reportTemplate = (options: PaginatorCurrentPageReportOptions) => {
   const boldStyle = { fontWeight: 700, color: '#000' }
 
   return (
