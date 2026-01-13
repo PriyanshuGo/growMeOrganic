@@ -7,8 +7,12 @@ import { Column } from 'primereact/column'
 import 'primereact/resources/themes/lara-light-blue/theme.css'
 import 'primereact/resources/primereact.min.css'
 import 'primeicons/primeicons.css'
-import { DataTable, DataTableSelectionChangeEvent } from 'primereact/datatable'
-import { PaginatorTemplateOptions, PaginatorCurrentPageReportOptions } from 'primereact/paginator'
+import { DataTable } from 'primereact/datatable'
+import {
+  PaginatorPrevPageLinkOptions,
+  PaginatorNextPageLinkOptions,
+  PaginatorCurrentPageReportOptions,
+} from 'primereact/paginator'
 
 
 type Artwork = {
@@ -87,7 +91,7 @@ function App() {
 
       return newSelection;
     });
-  }, [artworks,remainingRows]);
+  }, [artworks, remainingRows]);
 
 
 
@@ -121,7 +125,7 @@ function App() {
     fetchArtworks()
   }, [page])
 
-  const onSelectionChange = (e: DataTableSelectionChangeEvent) => {
+  const onSelectionChange = (e: { value: Artwork[] }) => {
     const newSelection = e.value as Artwork[]
 
     // HEADER CHECKBOX CHECKED (select all on current page)
@@ -169,6 +173,7 @@ function App() {
         selection={selectedArtworks}
         selectionPageOnly={false}
         onSelectionChange={onSelectionChange}
+        selectionMode="multiple"  
         loading={loading}
         stripedRows
         paginator
@@ -184,7 +189,7 @@ function App() {
         paginatorTemplate={{
           layout: 'CurrentPageReport PrevPageLink PageLinks NextPageLink',
           CurrentPageReport: reportTemplate,
-          PrevPageLink: (options: PaginatorTemplateOptions) => (
+          PrevPageLink: (options: PaginatorPrevPageLinkOptions) => (
             <button
               type="button"
               className={options.className}
@@ -194,7 +199,7 @@ function App() {
               Previous
             </button>
           ),
-          NextPageLink: (options: PaginatorTemplateOptions) => (
+          NextPageLink: (options: PaginatorNextPageLinkOptions) => (
             <button
               type="button"
               className={options.className}
@@ -284,7 +289,7 @@ function App() {
 export default App
 
 
- const reportTemplate = (options: PaginatorCurrentPageReportOptions) => {
+const reportTemplate = (options: PaginatorCurrentPageReportOptions) => {
   const boldStyle = { fontWeight: 700, color: '#000' }
 
   return (
@@ -297,7 +302,7 @@ export default App
 }
 
 
- const normalizeArtwork = (artwork: Artwork): Artwork => {
+const normalizeArtwork = (artwork: Artwork): Artwork => {
   return {
     ...artwork,
     inscriptions: artwork.inscriptions ?? 'N/A',
