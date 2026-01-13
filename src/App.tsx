@@ -1,16 +1,15 @@
 
 import { useEffect, useState } from 'react'
 import axios from 'axios'
-import { DataTable } from 'primereact/datatable'
 import { Column } from 'primereact/column'
 
 
 import 'primereact/resources/themes/lara-light-blue/theme.css'
 import 'primereact/resources/primereact.min.css'
 import 'primeicons/primeicons.css'
-import { DataTableSelectionChangeEvent } from 'primereact/datatable';
-import { PaginatorTemplateOptions } from 'primereact/paginator';
-import { PaginatorCurrentPageReportOptions } from 'primereact/paginator';
+import { DataTable, DataTableSelectionChangeEvent } from 'primereact/datatable'
+import { PaginatorTemplateOptions, PaginatorCurrentPageReportOptions } from 'primereact/paginator'
+
 
 type Artwork = {
   id: number
@@ -185,7 +184,7 @@ function App() {
         paginatorTemplate={{
           layout: 'CurrentPageReport PrevPageLink PageLinks NextPageLink',
           CurrentPageReport: reportTemplate,
-          PrevPageLink: (options: any) => (
+          PrevPageLink: (options: PaginatorTemplateOptions) => (
             <button
               type="button"
               className={options.className}
@@ -195,7 +194,7 @@ function App() {
               Previous
             </button>
           ),
-          NextPageLink: (options: any) => (
+          NextPageLink: (options: PaginatorTemplateOptions) => (
             <button
               type="button"
               className={options.className}
@@ -285,7 +284,7 @@ function App() {
 export default App
 
 
-export const reportTemplate = (options: PaginatorCurrentPageReportOptions) => {
+ const reportTemplate = (options: PaginatorCurrentPageReportOptions) => {
   const boldStyle = { fontWeight: 700, color: '#000' }
 
   return (
@@ -298,7 +297,7 @@ export const reportTemplate = (options: PaginatorCurrentPageReportOptions) => {
 }
 
 
-export const normalizeArtwork = (artwork: Artwork): Artwork => {
+ const normalizeArtwork = (artwork: Artwork): Artwork => {
   return {
     ...artwork,
     inscriptions: artwork.inscriptions ?? 'N/A',
