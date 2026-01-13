@@ -78,17 +78,26 @@ function App() {
 
     // HEADER CHECKBOX CHECKED (select all on current page)
     if (newSelection.length === artworks.length) {
-      setSelectedArtworks(prev => [...prev, ...newSelection]);
+      setSelectedArtworks(prev => [...prev, ...newSelection].reduce((acc: Artwork[], currentValue) => {
+        if (!acc.find(a => a.id === currentValue.id)) {
+          acc.push(currentValue)
+        }
+        return acc
+      }, []));
       return
     }
     // HEADER CHECKBOX UNCHECKED (unselect all on current page)
     if (newSelection.length === 0) {
-      console.log(e)
-      setSelectedArtworks(prev => prev.filter(element => artworks.includes(element) === false));
+      setSelectedArtworks(prev => prev.reduce((acc: Artwork[], currentValue) => {
+        if (!artworks.find(a => a.id === currentValue.id)) {
+          acc.push(currentValue)
+        } return acc
+      }, []));
       return
     }
 
     // NORMAL ROW SELECTION / DESELECTION
+    console.log(newSelection)
     setSelectedArtworks(newSelection)
   }
 
