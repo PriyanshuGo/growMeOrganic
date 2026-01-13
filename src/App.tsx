@@ -73,6 +73,25 @@ function App() {
     fetchArtworks()
   }, [page])
 
+  const onSelectionChange = (e: any) => {
+    const newSelection = e.value as Artwork[]
+
+    // HEADER CHECKBOX CHECKED (select all on current page)
+    if (newSelection.length === artworks.length) {
+      setSelectedArtworks(prev => [...prev, ...newSelection]);
+      return
+    }
+    // HEADER CHECKBOX UNCHECKED (unselect all on current page)
+    if (newSelection.length === 0) {
+      console.log(e)
+      setSelectedArtworks(prev => prev.filter(element => artworks.includes(element) === false));
+      return
+    }
+
+    // NORMAL ROW SELECTION / DESELECTION
+    setSelectedArtworks(newSelection)
+  }
+
   return (
     <main className="app">
       <header className="app__header">
@@ -87,12 +106,9 @@ function App() {
 
         value={artworks}
         dataKey="id"
-        selectionMode="multiple"
         selection={selectedArtworks}
-        onSelectionChange={(e) => {
-          setSelectedArtworks(e.value as Artwork[])
-        }}
-
+        selectionPageOnly={false}
+        onSelectionChange={onSelectionChange}
         loading={loading}
         stripedRows
         paginator
