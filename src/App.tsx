@@ -39,6 +39,13 @@ type Pagination = {
   next_url: string
   prev_url: string
 }
+
+type PageSelection = {
+  pageNo: number;
+  selectedItems: number[];
+};
+
+
 function App() {
   const [artworks, setArtworks] = useState<Artwork[]>([])
   const [loading, setLoading] = useState<boolean>(false)
@@ -46,53 +53,38 @@ function App() {
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [page, setPage] = useState<number>(1)
 
-  const [selectedArtworks, setSelectedArtworks] = useState<Artwork[]>([])
-
   const [showBulkSelect, setShowBulkSelect] = useState(false);
   const [bulkSelectCount, setBulkSelectCount] = useState<number>(0);
   const [remainingRows, setRemainingRows] = useState<number>(0);
 
 
-  const handleBulkSelect = () => {
-    if (!bulkSelectCount || bulkSelectCount <= 0) return;
+  const [globalSelection, setGlobalSelection] = useState<PageSelection[]>([]);
+  const selectedIdsForCurrentPage = globalSelection.find(p => p.pageNo === page)?.selectedItems ?? [];
+  const selectedRows = artworks.filter(a =>
+    selectedIdsForCurrentPage.includes(a.id)
+  );
 
-    setSelectedArtworks(prev => {
-      const newSelection: Artwork[] = [...prev];
+  const onSelectionChange = (e: { value: Artwork[] }) => {
+    const ids = e.value.map(a => a.id);
 
-      for (let i = 0; i < artworks.length && newSelection.length < bulkSelectCount; i++) {
-        if (!newSelection.find(a => a.id === artworks[i].id)) {
-          newSelection.push(artworks[i]);
-        }
+    setGlobalSelection(prev => {
+      const pageEntry = prev.find(p => p.pageNo === page);
+
+      // if page already exists → update it
+      if (pageEntry) {
+        return prev.map(p =>
+          p.pageNo === page
+            ? { ...p, selectedItems: ids }
+            : p
+        );
       }
 
-      const stillRemaining = bulkSelectCount - newSelection.length;
-      setRemainingRows(stillRemaining > 0 ? stillRemaining : 0);
-
-      return newSelection;
+      // else → add new page entry
+      return [...prev, { pageNo: page, selectedItems: ids }];
     });
 
-    setShowBulkSelect(false);
+    setBulkSelectCount(0);
   };
-
-  useEffect(() => {
-    if (remainingRows <= 0) return;
-
-    setSelectedArtworks(prev => {
-      const newSelection: Artwork[] = [...prev];
-
-      for (let i = 0; i < artworks.length && newSelection.length < prev.length + remainingRows; i++) {
-        if (!newSelection.find(a => a.id === artworks[i].id)) {
-          newSelection.push(artworks[i]);
-        }
-      }
-
-      const consumed = newSelection.length - prev.length;
-      setRemainingRows(r => r - consumed);
-
-      return newSelection;
-    });
-  }, [artworks, remainingRows]);
-
 
 
   useEffect(() => {
@@ -125,37 +117,6 @@ function App() {
     fetchArtworks()
   }, [page])
 
-  const onSelectionChange = (e: { value: Artwork[] }) => {
-    const newSelection = e.value as Artwork[]
-
-    // HEADER CHECKBOX CHECKED (select all on current page)
-    if (newSelection.length === artworks.length) {
-      setSelectedArtworks(prev => [...prev, ...newSelection].reduce((acc: Artwork[], currentValue) => {
-        if (!acc.find(a => a.id === currentValue.id)) {
-          acc.push(currentValue)
-        }
-        return acc
-      }, []));
-
-      setBulkSelectCount(0);
-      return
-    }
-    // HEADER CHECKBOX UNCHECKED (unselect all on current page)
-    if (newSelection.length === 0) {
-      setSelectedArtworks(prev => prev.reduce((acc: Artwork[], currentValue) => {
-        if (!artworks.find(a => a.id === currentValue.id)) {
-          acc.push(currentValue)
-        } return acc
-      }, []));
-      setBulkSelectCount(0);
-      return
-    }
-
-    // NORMAL ROW SELECTION / DESELECTION
-    console.log(newSelection)
-    setSelectedArtworks(newSelection)
-  }
-
   return (
     <main className="app">
       <header className="app__header">
@@ -165,15 +126,14 @@ function App() {
 
       {error && <div className="app__error">Error: {error}</div>}
 
-      <p>Selected : <span className='selectedRow'>{bulkSelectCount > 0 ? bulkSelectCount : selectedArtworks.length}</span> rows</p>
+      {/* <p>Selected : <span className='selectedRow'>{bulkSelectCount > 0 ? bulkSelectCount : globalSelection.flatMap(p => p.selectedItems) } </span> rows</p> */}
       <DataTable
-
         value={artworks}
         dataKey="id"
-        selection={selectedArtworks}
+        selection={selectedRows}
         selectionPageOnly={false}
         onSelectionChange={onSelectionChange}
-        selectionMode="multiple"  
+        selectionMode="multiple"
         loading={loading}
         stripedRows
         paginator
@@ -256,7 +216,7 @@ function App() {
                   />
 
                   <button
-                    onClick={handleBulkSelect}
+
                     style={{
                       marginTop: 10,
                       width: '100%',
