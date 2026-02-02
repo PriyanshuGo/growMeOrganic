@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import axios from 'axios'
 import { Column } from 'primereact/column'
 
@@ -40,10 +40,16 @@ type Pagination = {
   prev_url: string
 }
 
-type PageSelection = {
+type RowSelection = {
   pageNo: number;
   selectedItems: number[];
 };
+
+type BulkRowSelelction = {
+  pageNo: number;
+  count: number; // how many rows to select on this page
+};
+
 
 
 function App() {
@@ -55,10 +61,10 @@ function App() {
 
   const [showBulkSelect, setShowBulkSelect] = useState(false);
   const [bulkSelectCount, setBulkSelectCount] = useState<number>(0);
-  const [remainingRows, setRemainingRows] = useState<number>(0);
+  const bulkInputRef = useRef<number>(bulkSelectCount);
 
-
-  const [globalSelection, setGlobalSelection] = useState<PageSelection[]>([]);
+  const [globalSelection, setGlobalSelection] = useState<RowSelection[]>([]);
+  const [globalBulkSelection, setGlobalBulkSelection] = useState<BulkRowSelelction[]>([]);
   const selectedIdsForCurrentPage = globalSelection.find(p => p.pageNo === page)?.selectedItems ?? [];
   const selectedRows = artworks.filter(a =>
     selectedIdsForCurrentPage.includes(a.id)
@@ -69,7 +75,7 @@ function App() {
 
     setGlobalSelection(prev => {
       const pageEntry = prev.find(p => p.pageNo === page);
-
+console.log(pageEntry,"page entery matched as per pageno. found in the globalselection array.")
       // if page already exists → update it
       if (pageEntry) {
         return prev.map(p =>
@@ -81,6 +87,26 @@ function App() {
 
       // else → add new page entry
       return [...prev, { pageNo: page, selectedItems: ids }];
+    });
+
+    setGlobalBulkSelection(prev => {
+      const bulkForPage = prev.find(p => p.pageNo === page);
+
+      // no bulk active → do nothing
+      if (!bulkForPage) return prev;
+
+      // 🚨 user selected MORE rows than bulk planned
+      if (ids.length > bulkForPage.count) {
+        // bulk selection is no longer valid
+        return [];
+      }
+
+      // ✅ user deselected rows → shrink bulk count
+      return prev.map(p =>
+        p.pageNo === page
+          ? { ...p, count: ids.length }
+          : p
+      );
     });
 
     setBulkSelectCount(0);
@@ -117,6 +143,109 @@ function App() {
     fetchArtworks()
   }, [page])
 
+
+  // useEffect(() => {
+  //   if (!bulkSelectCount || !pagination?.limit) return; // guard clause
+
+  //   let remaining = bulkSelectCount;
+  //   let currentPage = 1;
+  //   const rowsPerPage = pagination.limit;
+  //   const plan: { pageNo: number; count: number }[] = [];
+
+  //   while (remaining > 0) {
+  //     const count = Math.min(remaining, rowsPerPage);
+  //     plan.push({ pageNo: currentPage, count });
+  //     remaining -= count;
+  //     currentPage += 1;
+  //   }
+  //   setGlobalBulkSelection(plan);
+  //   setBulkSelectCount(0)
+  //   setShowBulkSelect(false);
+
+
+  // }, [bulkSelectCount, pagination?.limit]);
+useEffect(() => {
+  if (!bulkSelectCount || !pagination?.limit) return;
+
+  // 🔥 RESET previous state
+  setGlobalSelection([]);
+
+  let remaining = bulkSelectCount;
+  let currentPage = 1;
+  const rowsPerPage = pagination.limit;
+  const plan: BulkRowSelelction[] = [];
+
+  while (remaining > 0) {
+    const count = Math.min(remaining, rowsPerPage);
+    plan.push({ pageNo: currentPage, count });
+    remaining -= count;
+    currentPage += 1;
+  }
+
+  setGlobalBulkSelection(plan);
+  setBulkSelectCount(0);
+  setShowBulkSelect(false);
+}, [bulkSelectCount, pagination?.limit]);
+
+  // useEffect(() => {
+  //   if (!artworks.length) return;
+
+  //   // find bulk plan for current page
+  //   const bulkForPage = globalBulkSelection.find(
+  //     p => p.pageNo === page
+  //   );
+
+  //   if (!bulkForPage) return;
+
+  //   // pick first N rows from current page
+  //   const idsToSelect = artworks
+  //     .slice(0, bulkForPage.count)
+  //     .map(a => a.id);
+
+  //   setGlobalSelection(prev => {
+  //     const existing = prev.find(p => p.pageNo === page);
+
+  //     // update page if already exists
+  //     if (existing) {
+  //       return prev.map(p =>
+  //         p.pageNo === page
+  //           ? { ...p, selectedItems: idsToSelect }
+  //           : p
+  //       );
+  //     }
+
+  //     // else add new page entry
+  //     return [...prev, { pageNo: page, selectedItems: idsToSelect }];
+  //   });
+
+  // }, [artworks, page, globalBulkSelection]);
+useEffect(() => {
+  if (!artworks.length) return;
+  if (globalBulkSelection.length === 0) return;
+
+  const bulkForPage = globalBulkSelection.find(p => p.pageNo === page);
+  if (!bulkForPage) return;
+
+  const idsToSelect = artworks
+    .slice(0, bulkForPage.count)
+    .map(a => a.id);
+
+  setGlobalSelection(prev => {
+    const existing = prev.find(p => p.pageNo === page);
+
+    if (existing) {
+      return prev.map(p =>
+        p.pageNo === page 
+          ? { ...p, selectedItems: idsToSelect }
+          : p
+      );
+    }
+
+    return [...prev, { pageNo: page, selectedItems: idsToSelect }];
+  });
+}, [artworks, page, globalBulkSelection]);
+
+
   return (
     <main className="app">
       <header className="app__header">
@@ -126,7 +255,35 @@ function App() {
 
       {error && <div className="app__error">Error: {error}</div>}
 
-      {/* <p>Selected : <span className='selectedRow'>{bulkSelectCount > 0 ? bulkSelectCount : globalSelection.flatMap(p => p.selectedItems) } </span> rows</p> */}
+      <p>
+        Selected:{' '}
+        <span className="selectedRow">
+          {(() => {
+            // CASE 1: No bulk selection → manual only
+            if (globalBulkSelection.length === 0) {
+              return globalSelection.reduce(
+                (sum, p) => sum + p.selectedItems.length,
+                0
+              );
+            }
+
+            // CASE 2: Bulk + manual adjustments
+            const bulkTotal = globalBulkSelection.reduce(
+              (sum, p) => sum + p.count,
+              0
+            );
+
+            const manualDelta = globalSelection.reduce((sum, sel) => {
+              const bulk = globalBulkSelection.find(b => b.pageNo === sel.pageNo);
+              if (!bulk) return sum;
+              return sum + (sel.selectedItems.length - bulk.count);
+            }, 0);
+
+            return bulkTotal + manualDelta;
+          })()}
+        </span>{' '}
+        rows
+      </p>
       <DataTable
         value={artworks}
         dataKey="id"
@@ -205,8 +362,10 @@ function App() {
 
                   <input
                     type="number"
-                    value={bulkSelectCount}
-                    onChange={(e) => setBulkSelectCount(Number(e.target.value))}
+                    defaultValue={bulkSelectCount}
+                    onChange={(e) => {
+                      bulkInputRef.current = Number(e.target.value); // store in ref
+                    }}
                     style={{
                       width: '100%',
                       marginTop: 6,
@@ -216,6 +375,7 @@ function App() {
                   />
 
                   <button
+                    onClick={() => setBulkSelectCount(bulkInputRef.current)}
 
                     style={{
                       marginTop: 10,
